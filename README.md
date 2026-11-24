@@ -60,7 +60,6 @@ Dot-source `scripts/agy.ps1` in your PowerShell `$PROFILE`, or run directly:
 Optional environment variables:
 
 - `AGY_EXE`: Explicit path to `agy.exe` (defaults to searching `PATH`).
-- `AGY_PROXY_PORT`: Optional local proxy port (e.g., `7890`) to bind `HTTP_PROXY`/`HTTPS_PROXY` for the `agy` process only.
 - `AGY_HARNESS_PYTHON`: Explicit Python executable path for `agy-watchdog.ps1` (defaults to `python` on `PATH`).
 - `AGY_CLI_AUTO_COMPACT_OVERRIDE`: Native Antigravity CLI (`1.5.15+`) hard auto-compact fallback (e.g., `750K`).
 - `AUTO_COMPACT_WARN_TOKENS` / `AUTO_COMPACT_TRIGGER_TOKENS` / `AUTO_COMPACT_EOF_TOKENS` / `AUTO_COMPACT_COOLDOWN_SECONDS`: Override hook thresholds (defaults: `300000` / `400000` / `150000` / `180`).
