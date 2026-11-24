@@ -22,6 +22,7 @@ Unattended Windows harness for **Google Antigravity CLI (`agy`)**:
 | [`scripts/watchdog/`](scripts/watchdog/README.md) | `agy-watchdog.ps1` | Host-side non-blocking 400ms poller for `dispatch_ready` compact requests + `cli-*.log` EOF watcher & auto-continue trigger. |
 | [`scripts/compact/`](scripts/compact/README.md) | `request-compact.ps1`, `auto-compact-worker.ps1` | Compact request producer, atomic claim, cooldown guard, idle wait, `/compact` injection, and post-`CHECKPOINT` auto-resume. |
 | [`scripts/injector/`](scripts/injector/README.md) | `send-console-input.ps1` | Win32 `AttachConsole` / `CONIN$` / `WriteConsoleInputW` console input primitive (supports `-TextBase64`). |
+| [`skills/auto-compact/`](skills/auto-compact/SKILL.md) | `SKILL.md` | Agent-side skill template defining the 300k/400k + 150k EOF decision matrix and the 4-step safe compaction handshake. |
 
 ## Quick Start (Windows)
 
@@ -51,7 +52,19 @@ Add the hook entry to `~/.gemini/config/hooks.json` (replace `<REPO_PATH>` and `
 }
 ```
 
-### 2. Enable Seamless `agy` Command (Recommended)
+### 2. Install the `auto-compact` Skill
+
+Copy the skill template into your Antigravity skills directory so the agent knows how to execute the safe `/compact` handshake when prompted by hooks:
+
+```powershell
+$skillDir = "$HOME\.gemini\config\skills\auto-compact"
+New-Item -ItemType Directory -Path $skillDir -Force | Out-Null
+Copy-Item ".\skills\auto-compact\SKILL.md" "$skillDir\SKILL.md" -Force
+```
+
+Then replace `<REPO_PATH>` (and `python` if needed) inside `~/.gemini/config/skills/auto-compact/SKILL.md` with your local paths.
+
+### 3. Enable Seamless `agy` Command (Recommended)
 
 Add a single line to your PowerShell `$PROFILE` so typing `agy` in any terminal automatically starts the entire harness (hooks + background watchdog) and cleans up the watchdog on exit—no need to invoke any `.ps1` script manually:
 

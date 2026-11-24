@@ -22,6 +22,7 @@
 | [`scripts/watchdog/`](scripts/watchdog/README.md) | `agy-watchdog.ps1` | 宿主机守护层：400ms 非阻塞轮询 `dispatch_ready` 压缩请求，并监听 `cli-*.log` 捕获瞬时 EOF 与触发自动续跑。 |
 | [`scripts/compact/`](scripts/compact/README.md) | `request-compact.ps1`、`auto-compact-worker.ps1` | 压缩调度与执行层：请求入队/直发、原子认领、硬冷却防重入、等待空闲、`/compact` 注入及 `CHECKPOINT` 后自动续跑。 |
 | [`scripts/injector/`](scripts/injector/README.md) | `send-console-input.ps1` | 底层控制台注入层：基于 Win32 `AttachConsole` / `CONIN$` / `WriteConsoleInputW` 的定向输入原语（支持 `-TextBase64`）。 |
+| [`skills/auto-compact/`](skills/auto-compact/SKILL.md) | `SKILL.md` | Agent 侧 Skill 模板：定义 300k/400k 与 150k EOF 判定矩阵及四步安全压缩握手协议。 |
 
 ## 快速开始（Windows）
 
@@ -51,7 +52,19 @@
 }
 ```
 
-### 2. 接入 `agy` 命令（推荐，一次配置，后续直接输 `agy`）
+### 2. 安装 `auto-compact` Skill
+
+将仓库中的 Skill 模板复制到 Antigravity 的全局技能目录，让模型在钩子触发时能够按四步安全协议完成落盘与自动 `/compact`：
+
+```powershell
+$skillDir = "$HOME\.gemini\config\skills\auto-compact"
+New-Item -ItemType Directory -Path $skillDir -Force | Out-Null
+Copy-Item ".\skills\auto-compact\SKILL.md" "$skillDir\SKILL.md" -Force
+```
+
+复制后，将 `~/.gemini/config/skills/auto-compact/SKILL.md` 中的 `<REPO_PATH>`（以及按需替换 `python`）改为你的本机路径即可。
+
+### 3. 接入 `agy` 命令（推荐，一次配置，后续直接输 `agy`）
 
 在你的 PowerShell `$PROFILE` 中加入一行 dot-source，以后在任意终端目录直接输入 `agy`，就会自动拉起整套系统（原生钩子 + 后台 Watchdog），并在退出 `agy` 时自动清理后台进程，日常无需手动运行任何 `.ps1` 脚本：
 
