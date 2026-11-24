@@ -51,13 +51,28 @@ Add the hook entry to `~/.gemini/config/hooks.json` (replace `<REPO_PATH>` and `
 }
 ```
 
-### 2. Launch `agy` with Watchdog
+### 2. Enable Seamless `agy` Command (Recommended)
 
-Dot-source `scripts/launcher/agy.ps1` in your PowerShell `$PROFILE`, or run directly:
+Add a single line to your PowerShell `$PROFILE` so typing `agy` in any terminal automatically starts the entire harness (hooks + background watchdog) and cleans up the watchdog on exit—no need to invoke any `.ps1` script manually:
 
 ```powershell
-.\scripts\launcher\agy-stable.ps1
+# Append to your PowerShell profile (creates $PROFILE if it doesn't exist)
+New-Item -ItemType File -Path $PROFILE -Force | Out-Null
+Add-Content -Path $PROFILE -Value '. "<REPO_PATH>\scripts\launcher\agy.ps1"'
+
+# Reload your profile once (or open a new terminal)
+. $PROFILE
 ```
+
+From then on, just run `agy` as usual in any directory:
+
+```powershell
+agy
+```
+
+> **Note:** If you already use a custom `agy` wrapper in `$PROFILE` (for example, to configure local proxy environment variables), keep your own wrapper and simply launch `<REPO_PATH>\scripts\watchdog\agy-watchdog.ps1 -WaitForNew` inside it before `& $exe @args`.
+>
+> **Alternative (one-off launch without editing `$PROFILE`):** run `.\scripts\launcher\agy-stable.ps1` (PowerShell) or `.\scripts\launcher\agy-stable.cmd` (CMD).
 
 Optional environment variables:
 

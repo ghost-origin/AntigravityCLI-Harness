@@ -51,13 +51,28 @@
 }
 ```
 
-### 2. 携带 Watchdog 启动 `agy`
+### 2. 接入 `agy` 命令（推荐，一次配置，后续直接输 `agy`）
 
-在 PowerShell `$PROFILE` 中 dot-source `scripts/launcher/agy.ps1`，或直接运行：
+在你的 PowerShell `$PROFILE` 中加入一行 dot-source，以后在任意终端目录直接输入 `agy`，就会自动拉起整套系统（原生钩子 + 后台 Watchdog），并在退出 `agy` 时自动清理后台进程，日常无需手动运行任何 `.ps1` 脚本：
 
 ```powershell
-.\scripts\launcher\agy-stable.ps1
+# 写入当前 PowerShell 的 $PROFILE（如文件不存在会自动创建）
+New-Item -ItemType File -Path $PROFILE -Force | Out-Null
+Add-Content -Path $PROFILE -Value '. "<REPO_PATH>\scripts\launcher\agy.ps1"'
+
+# 立即生效（或新开一个终端窗口）
+. $PROFILE
 ```
+
+配置完成后，日常直接像平时一样输入 `agy` 即可：
+
+```powershell
+agy
+```
+
+> **说明**：如果你自己的 `$PROFILE` 里已经定义了自定义 `agy` 函数（例如用于管理本地网络/代理环境变量），保留你的函数即可，只需在调用 `& $exe @args` 前隐藏拉起 `<REPO_PATH>\scripts\watchdog\agy-watchdog.ps1 -WaitForNew`，并在 `finally` 中停止它。
+>
+> **备选（不修改 `$PROFILE` 时的临时启动方式）**：直接运行 `.\scripts\launcher\agy-stable.ps1`（PowerShell）或 `.\scripts\launcher\agy-stable.cmd`（CMD）。
 
 可选环境变量：
 
