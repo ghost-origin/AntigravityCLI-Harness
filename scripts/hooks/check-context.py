@@ -7,7 +7,7 @@ import re
 import sys
 
 EOF_RE = re.compile(r'unexpected\s+eof|stream\s+reading\s+error|\beof\b|stream\s+closed', re.IGNORECASE)
-DEFAULT_HARNESS_ROOT = str(pathlib.Path(__file__).resolve().parent.parent)
+DEFAULT_HARNESS_ROOT = str(pathlib.Path(__file__).resolve().parent.parent.parent)
 
 
 def parse_iso(ts: str):

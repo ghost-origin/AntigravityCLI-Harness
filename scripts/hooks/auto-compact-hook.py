@@ -9,7 +9,7 @@ import sys
 
 sys.dont_write_bytecode = True
 
-DEFAULT_HARNESS_ROOT = str(pathlib.Path(__file__).resolve().parent.parent)
+DEFAULT_HARNESS_ROOT = str(pathlib.Path(__file__).resolve().parent.parent.parent)
 HARNESS_ROOT = pathlib.Path(os.environ.get('GEMINI_HARNESS_ROOT', DEFAULT_HARNESS_ROOT))
 WARN_TOKENS = int(os.environ.get('AUTO_COMPACT_WARN_TOKENS', '300000'))
 TRIGGER_TOKENS = int(os.environ.get('AUTO_COMPACT_TRIGGER_TOKENS', '400000'))

@@ -13,7 +13,8 @@ param(
 )
 
 $ErrorActionPreference = 'Continue'
-$repoRoot = Split-Path $PSScriptRoot -Parent
+$scriptsRoot = Split-Path $PSScriptRoot -Parent
+$repoRoot = Split-Path $scriptsRoot -Parent
 
 if (-not $RequestFile) { $RequestFile = Join-Path $repoRoot 'tmp\compact_request.json' }
 if (-not $LogDir)      { $LogDir      = Join-Path $env:USERPROFILE '.gemini\antigravity-cli\log' }
@@ -156,7 +157,7 @@ if ($pidToUse -le 0) {
 $beforeCp = Get-CheckpointCount $transcript
 
 function Invoke-ConsoleInjector([int]$targetPid, [string]$textValue, [int]$enters, [int]$cDelay) {
-    $injector = Join-Path $PSScriptRoot 'send-console-input.ps1'
+    $injector = Join-Path $scriptsRoot 'injector\send-console-input.ps1'
     if (-not (Test-Path $injector)) {
         return $null
     }

@@ -18,7 +18,8 @@ param(
 )
 
 $ErrorActionPreference = 'Continue'
-$repoRoot = Split-Path $PSScriptRoot -Parent
+$scriptsRoot = Split-Path $PSScriptRoot -Parent
+$repoRoot = Split-Path $scriptsRoot -Parent
 
 if (-not $LogDir) {
     $LogDir = Join-Path $env:USERPROFILE '.gemini\antigravity-cli\log'
@@ -59,7 +60,7 @@ function Resolve-PythonExe {
 }
 
 function Get-ContextSnapshot {
-    $chk = Join-Path $PSScriptRoot 'check-context.py'
+    $chk = Join-Path $scriptsRoot 'hooks\check-context.py'
     $pyBin = Resolve-PythonExe
     if (-not (Test-Path $chk) -or -not $pyBin) { return $null }
     try {
@@ -70,7 +71,7 @@ function Get-ContextSnapshot {
 }
 
 function Dispatch-CompactWorker([switch]$IsAlreadyIdle) {
-    $worker = Join-Path $PSScriptRoot 'auto-compact-worker.ps1'
+    $worker = Join-Path $scriptsRoot 'compact\auto-compact-worker.ps1'
     if (-not (Test-Path $worker)) {
         Write-WatchLog 'auto-compact-worker.ps1 not found'
         return
@@ -318,7 +319,7 @@ while ($true) {
                 $continues = $continues + 1
             }
             else {
-                $helper = Join-Path $PSScriptRoot 'send-console-input.ps1'
+                $helper = Join-Path $scriptsRoot 'injector\send-console-input.ps1'
                 if (Test-Path $helper) {
                     $b64 = [Convert]::ToBase64String([System.Text.Encoding]::UTF8.GetBytes($promptToSend))
                     $argLine = '-NoProfile -ExecutionPolicy Bypass -File "' + $helper + '" -ProcessId ' + $target.Id + ' -TextBase64 "' + $b64 + '"'

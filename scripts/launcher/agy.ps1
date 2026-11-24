@@ -1,4 +1,4 @@
-$GeminiHarnessScripts = $PSScriptRoot
+$GeminiHarnessScripts = Split-Path $PSScriptRoot -Parent
 
 function agy {
     $exe = if ($env:AGY_EXE) { $env:AGY_EXE } else {
@@ -11,7 +11,7 @@ function agy {
     }
 
     $watchdog = $null
-    $watchdogScript = Join-Path $GeminiHarnessScripts 'agy-watchdog.ps1'
+    $watchdogScript = Join-Path $GeminiHarnessScripts 'watchdog\agy-watchdog.ps1'
     if (Test-Path $watchdogScript) {
         $watchdogArgLine = '-NoProfile -ExecutionPolicy Bypass -File "' + $watchdogScript + '" -WaitForNew'
         $watchdog = Start-Process -FilePath 'powershell.exe' -ArgumentList $watchdogArgLine -WindowStyle Hidden -PassThru

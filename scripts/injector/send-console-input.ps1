@@ -19,7 +19,9 @@ if (-not $Text -and $EnterCount -le 0) {
 }
 
 if (-not $LogFile) {
-    $LogFile = Join-Path (Split-Path $PSScriptRoot -Parent) 'logs\send_console_input.log'
+    $scriptsRoot = Split-Path $PSScriptRoot -Parent
+    $repoRoot = Split-Path $scriptsRoot -Parent
+    $LogFile = Join-Path $repoRoot 'logs\send_console_input.log'
 }
 
 Add-Type @"

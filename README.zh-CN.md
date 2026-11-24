@@ -15,15 +15,13 @@
 
 ## 目录结构
 
-| 文件 | 说明 |
-| :--- | :--- |
-| `scripts/check-context.py` | 只读分析 `transcript.jsonl` 与 `tmp/eof_signal.json`，以 JSON 输出精确 token 数、checkpoint 次数、冷却状态与建议动作。 |
-| `scripts/auto-compact-hook.py` | 供 Antigravity 全局 `~/.gemini/config/hooks.json` 调用的 `PreInvocation` / `Stop` 钩子脚本。 |
-| `scripts/agy-watchdog.ps1` | 400ms 非阻塞轮询 `dispatch_ready` 压缩请求，同时监听 `cli-*.log` 捕获瞬时 EOF 并触发自动续跑。 |
-| `scripts/request-compact.ps1` | 压缩请求下发入口（watchdog 在线时入队，否则直接拉起 `auto-compact-worker.ps1`）。 |
-| `scripts/auto-compact-worker.ps1` | 原子认领请求、硬冷却防重入、等待回合空闲、注入 `/compact` 及 `CHECKPOINT` 后自动续跑。 |
-| `scripts/send-console-input.ps1` | 基于 Win32 `AttachConsole` / `CONIN$` / `WriteConsoleInputW` 的控制台注入器（支持 `-TextBase64`）。 |
-| `scripts/agy.ps1`、`scripts/agy-stable.ps1`、`scripts/agy-stable.cmd` | `agy` 启动包装脚本，负责随 `agy.exe` 启动并在退出时清理 `agy-watchdog.ps1`。 |
+| 层次目录 | 包含文件 | 核心职责 |
+| :--- | :--- | :--- |
+| [`scripts/launcher/`](scripts/launcher/README.md) | `agy.ps1`、`agy-stable.ps1`、`agy-stable.cmd` | 启动封装层：与网络/代理层解耦，负责随 `agy.exe` 启动并在退出时清理 `agy-watchdog.ps1`。 |
+| [`scripts/hooks/`](scripts/hooks/README.md) | `check-context.py`、`auto-compact-hook.py` | 生命周期钩子与度量层：`PreInvocation` / `Stop` 钩子与 `transcript.jsonl` 客观度量（CLI / Desktop / ACP 通用）。 |
+| [`scripts/watchdog/`](scripts/watchdog/README.md) | `agy-watchdog.ps1` | 宿主机守护层：400ms 非阻塞轮询 `dispatch_ready` 压缩请求，并监听 `cli-*.log` 捕获瞬时 EOF 与触发自动续跑。 |
+| [`scripts/compact/`](scripts/compact/README.md) | `request-compact.ps1`、`auto-compact-worker.ps1` | 压缩调度与执行层：请求入队/直发、原子认领、硬冷却防重入、等待空闲、`/compact` 注入及 `CHECKPOINT` 后自动续跑。 |
+| [`scripts/injector/`](scripts/injector/README.md) | `send-console-input.ps1` | 底层控制台注入层：基于 Win32 `AttachConsole` / `CONIN$` / `WriteConsoleInputW` 的定向输入原语（支持 `-TextBase64`）。 |
 
 ## 快速开始（Windows）
 
@@ -38,14 +36,14 @@
     "PreInvocation": [
       {
         "type": "command",
-        "command": "python <REPO_PATH>/scripts/auto-compact-hook.py",
+        "command": "python <REPO_PATH>/scripts/hooks/auto-compact-hook.py",
         "timeout": 10
       }
     ],
     "Stop": [
       {
         "type": "command",
-        "command": "python <REPO_PATH>/scripts/auto-compact-hook.py",
+        "command": "python <REPO_PATH>/scripts/hooks/auto-compact-hook.py",
         "timeout": 10
       }
     ]
@@ -55,10 +53,10 @@
 
 ### 2. 携带 Watchdog 启动 `agy`
 
-在 PowerShell `$PROFILE` 中 dot-source `scripts/agy.ps1`，或直接运行：
+在 PowerShell `$PROFILE` 中 dot-source `scripts/launcher/agy.ps1`，或直接运行：
 
 ```powershell
-.\scripts\agy-stable.ps1
+.\scripts\launcher\agy-stable.ps1
 ```
 
 可选环境变量：

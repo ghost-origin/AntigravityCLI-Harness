@@ -22,7 +22,8 @@ param(
 )
 
 $ErrorActionPreference = 'Stop'
-$repoRoot = Split-Path $PSScriptRoot -Parent
+$scriptsRoot = Split-Path $PSScriptRoot -Parent
+$repoRoot = Split-Path $scriptsRoot -Parent
 
 if (-not $RequestFile) { $RequestFile = Join-Path $repoRoot 'tmp\compact_request.json' }
 if (-not $OutLog)      { $OutLog      = Join-Path $repoRoot 'logs\auto_compact.log' }

@@ -15,15 +15,13 @@ Unattended Windows harness for **Google Antigravity CLI (`agy`)**:
 
 ## Layout
 
-| File | Purpose |
-| :--- | :--- |
-| `scripts/check-context.py` | Read-only analyzer for `transcript.jsonl` and `tmp/eof_signal.json`; outputs exact token count, checkpoint count, cooldown, and action recommendation as JSON. |
-| `scripts/auto-compact-hook.py` | Antigravity native `PreInvocation` / `Stop` hook handler for `~/.gemini/config/hooks.json`. |
-| `scripts/agy-watchdog.ps1` | Non-blocking 400ms poller for `dispatch_ready` compact requests + `cli-*.log` EOF watcher & auto-continue trigger. |
-| `scripts/request-compact.ps1` | Compact request producer (queues for watchdog or launches `auto-compact-worker.ps1` directly). |
-| `scripts/auto-compact-worker.ps1` | Atomic request claim, cooldown guard, idle wait, `/compact` injection, and post-`CHECKPOINT` auto-resume. |
-| `scripts/send-console-input.ps1` | Win32 `AttachConsole` / `CONIN$` / `WriteConsoleInputW` injector (supports `-TextBase64`). |
-| `scripts/agy.ps1`, `scripts/agy-stable.ps1`, `scripts/agy-stable.cmd` | Launcher wrappers that start and clean up `agy-watchdog.ps1` alongside `agy.exe`. |
+| Layer | Files | Purpose |
+| :--- | :--- | :--- |
+| [`scripts/launcher/`](scripts/launcher/README.md) | `agy.ps1`, `agy-stable.ps1`, `agy-stable.cmd` | Network-agnostic launcher wrappers that start and clean up `agy-watchdog.ps1` alongside `agy.exe`. |
+| [`scripts/hooks/`](scripts/hooks/README.md) | `check-context.py`, `auto-compact-hook.py` | Antigravity native `PreInvocation` / `Stop` hook handler and read-only `transcript.jsonl` context analyzer (works across CLI, Desktop, and ACP). |
+| [`scripts/watchdog/`](scripts/watchdog/README.md) | `agy-watchdog.ps1` | Host-side non-blocking 400ms poller for `dispatch_ready` compact requests + `cli-*.log` EOF watcher & auto-continue trigger. |
+| [`scripts/compact/`](scripts/compact/README.md) | `request-compact.ps1`, `auto-compact-worker.ps1` | Compact request producer, atomic claim, cooldown guard, idle wait, `/compact` injection, and post-`CHECKPOINT` auto-resume. |
+| [`scripts/injector/`](scripts/injector/README.md) | `send-console-input.ps1` | Win32 `AttachConsole` / `CONIN$` / `WriteConsoleInputW` console input primitive (supports `-TextBase64`). |
 
 ## Quick Start (Windows)
 
@@ -38,14 +36,14 @@ Add the hook entry to `~/.gemini/config/hooks.json` (replace `<REPO_PATH>` and `
     "PreInvocation": [
       {
         "type": "command",
-        "command": "python <REPO_PATH>/scripts/auto-compact-hook.py",
+        "command": "python <REPO_PATH>/scripts/hooks/auto-compact-hook.py",
         "timeout": 10
       }
     ],
     "Stop": [
       {
         "type": "command",
-        "command": "python <REPO_PATH>/scripts/auto-compact-hook.py",
+        "command": "python <REPO_PATH>/scripts/hooks/auto-compact-hook.py",
         "timeout": 10
       }
     ]
@@ -55,10 +53,10 @@ Add the hook entry to `~/.gemini/config/hooks.json` (replace `<REPO_PATH>` and `
 
 ### 2. Launch `agy` with Watchdog
 
-Dot-source `scripts/agy.ps1` in your PowerShell `$PROFILE`, or run directly:
+Dot-source `scripts/launcher/agy.ps1` in your PowerShell `$PROFILE`, or run directly:
 
 ```powershell
-.\scripts\agy-stable.ps1
+.\scripts\launcher\agy-stable.ps1
 ```
 
 Optional environment variables:
