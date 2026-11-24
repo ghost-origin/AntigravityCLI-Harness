@@ -1,5 +1,9 @@
 # AntigravityCLI-Harness
 
+<p align="center">
+  <strong>English</strong> | <a href="README.zh-CN.md">简体中文</a>
+</p>
+
 Unattended Windows harness for **Google Antigravity CLI (`agy`)**:
 
 - **Lifecycle Hook Guard (`PreInvocation` / `Stop`)**: Objective token tracking from `transcript.jsonl` with configurable thresholds (default: `<300k` silent, `300k–400k` milestone advisory, `>=400k` mandatory reminder + one-time `Stop` pullback).
