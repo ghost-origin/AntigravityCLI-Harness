@@ -26,13 +26,28 @@ class MONITORINFO(ctypes.Structure):
 def _setup_win32():
     user32 = ctypes.windll.user32
     dwmapi = ctypes.windll.dwmapi
+    dpi_ok = False
     try:
-        user32.SetProcessDpiAwarenessContext(ctypes.c_void_p(-4))
+        user32.SetProcessDpiAwarenessContext.argtypes = [ctypes.c_void_p]
+        user32.SetProcessDpiAwarenessContext.restype = wt.BOOL
+        dpi_ok = bool(user32.SetProcessDpiAwarenessContext(ctypes.c_void_p(-4)))
     except Exception:
+        dpi_ok = False
+    if not dpi_ok:
+        try:
+            shcore = ctypes.windll.shcore
+            shcore.SetProcessDpiAwareness.argtypes = [ctypes.c_int]
+            shcore.SetProcessDpiAwareness.restype = ctypes.c_long
+            dpi_ok = (shcore.SetProcessDpiAwareness(2) == 0)
+        except Exception:
+            dpi_ok = False
+    if not dpi_ok:
         try:
             user32.SetProcessDPIAware()
         except Exception:
             pass
+    user32.GetDpiForWindow.argtypes = [wt.HWND]
+    user32.GetDpiForWindow.restype = wt.UINT
     user32.IsWindow.argtypes = [wt.HWND]
     user32.IsWindow.restype = wt.BOOL
     user32.IsWindowVisible.argtypes = [wt.HWND]
@@ -105,6 +120,16 @@ def solve_dock_step(prev_t, cur_t, prev_s, cur_s):
     if not t_changed and not s_changed:
         return None, None
 
+    # Simultaneous change (e.g., streaming resolution/DPI change or monitor transfer):
+    # re-anchor sidebar cleanly flush to terminal's new visible rect.
+    if t_changed and s_changed:
+        ctl, ctt, ctr, ctb = cur_t
+        sw = max(MIN_SIDEBAR_W, cur_s[2] - cur_s[0])
+        new_s = (ctr, ctt, ctr + sw, ctb)
+        if all(abs(new_s[i] - cur_s[i]) <= EPS for i in range(4)):
+            return None, None
+        return None, new_s
+
     if t_changed:
         ptl, ptt, ptr, ptb = prev_t
         ctl, ctt, ctr, ctb = cur_t
@@ -115,9 +140,14 @@ def solve_dock_step(prev_t, cur_t, prev_s, cur_s):
         dR = ctr - ptr
         dB = ctb - ptb
 
-        # Pure move of terminal -> move sidebar by exact same delta
+        # Pure move of terminal -> anchor sidebar directly to terminal's exact right/top/bottom
+        # (absolute invariant prevents any accumulated drift or post-streaming offset).
         if abs(dL - dR) <= EPS and abs(dT - dB) <= EPS:
-            return None, (psl + dL, pst + dT, psr + dL, psb + dT)
+            sw = max(MIN_SIDEBAR_W, psr - psl)
+            new_s = (ctr, ctt, ctr + sw, ctb)
+            if all(abs(new_s[i] - cur_s[i]) <= EPS for i in range(4)):
+                return None, None
+            return None, new_s
 
         # Resize of terminal: keep outer right edge (psr) FIXED when dragging the seam (dR != 0)
         new_sl = ctr
@@ -139,9 +169,13 @@ def solve_dock_step(prev_t, cur_t, prev_s, cur_s):
     dR = csr - psr
     dB = csb - psb
 
-    # Pure move of sidebar -> move terminal by exact same delta
+    # Pure move of sidebar -> anchor terminal directly to sidebar's exact left/top/bottom
     if abs(dL - dR) <= EPS and abs(dT - dB) <= EPS:
-        return (ptl + dL, ptt + dT, ptr + dL, ptb + dT), None
+        tw = max(MIN_TERM_W, ptr - ptl)
+        new_t = (csl - tw, cst, csl, csb)
+        if all(abs(new_t[i] - cur_t[i]) <= EPS for i in range(4)):
+            return None, None
+        return new_t, None
 
     # Resize of sidebar: keep outer left edge (ptl) FIXED when dragging the seam (dL != 0)
     new_tl = ptl
@@ -177,8 +211,19 @@ class WindowDocker:
         self.last_fg = 0
         self.last_min_state = False
         self.last_term_title = ''
+        self.last_display_sig = None
         if self.enabled:
             self.u32, self.dwm = _setup_win32()
+
+    def _display_sig(self, th, eh):
+        if not self.enabled:
+            return None
+        try:
+            tdpi = int(self.u32.GetDpiForWindow(th))
+            edpi = int(self.u32.GetDpiForWindow(eh))
+        except Exception:
+            tdpi, edpi = 0, 0
+        return (self._monitor_work(th), tdpi, edpi)
 
     def _window_title(self, hwnd) -> str:
         if not self.enabled or not hwnd:
@@ -217,7 +262,11 @@ class WindowDocker:
         vis = self._vis_rect(hwnd)
         if not raw or not vis:
             return (0, 0, 0, 0)
-        return (vis[0] - raw[0], vis[1] - raw[1], raw[2] - vis[2], raw[3] - vis[3])
+        vals = (vis[0] - raw[0], vis[1] - raw[1], raw[2] - vis[2], raw[3] - vis[3])
+        # Guard against transient DPI-transition mismatches where raw vs DWM diverge wildly
+        if any(v < -4 or v > 32 for v in vals):
+            return (0, 0, 0, 0)
+        return vals
 
     def _set_vis_rect(self, hwnd, vrect):
         inL, inT, inR, inB = self._insets(hwnd)
@@ -269,6 +318,7 @@ class WindowDocker:
             self.prev_t = self._vis_rect(self.term_hwnd)
             self.prev_s = self._vis_rect(self.edge_hwnd)
             self.last_term_title = self._window_title(self.term_hwnd)
+            self.last_display_sig = self._display_sig(self.term_hwnd, self.edge_hwnd)
 
         if not self._thread or not self._thread.is_alive():
             self._stop.clear()
@@ -319,6 +369,23 @@ class WindowDocker:
                 continue
             if t_min or e_min:
                 time.sleep(0.1)
+                continue
+
+            # Auto re-anchor if display resolution or DPI changed (e.g., remote streaming)
+            disp_sig = self._display_sig(th, eh)
+            if self.last_display_sig is not None and disp_sig != self.last_display_sig:
+                self.last_display_sig = disp_sig
+                time.sleep(0.25)
+                cur_t = self._vis_rect(th)
+                cur_s = self._vis_rect(eh)
+                if cur_t and cur_s:
+                    work = disp_sig[0]
+                    ww = work[2] - work[0]
+                    sw = max(MIN_SIDEBAR_W, min(cur_s[2] - cur_s[0], int(round(ww * 0.55))))
+                    new_s = (cur_t[2], cur_t[1], cur_t[2] + sw, cur_t[3])
+                    self._set_vis_rect(eh, new_s)
+                    self.prev_t = self._vis_rect(th) or cur_t
+                    self.prev_s = self._vis_rect(eh) or new_s
                 continue
 
             # Keep Z-order paired when switching focus to either window
