@@ -1,0 +1,71 @@
+<!doctype html>
+<html lang="zh-CN" data-theme="dark">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>AGY 公式与图片侧边栏</title>
+  <link rel="stylesheet" href="/vendor/katex/katex.min.css" />
+  <link rel="stylesheet" href="/static/styles.css" />
+</head>
+<body>
+  <header class="topbar">
+    <div class="topbar-row">
+      <span class="brand">
+        <span class="status-dot" id="statusDot" title="实时连接状态"></span>
+        AGY Sidebar
+      </span>
+      <div class="conv-dropdown" id="convDropdown">
+        <button id="convTrigger" class="conv-trigger" type="button" title="左键选择会话，在列表中右键会话名可在新终端打开 agy">
+          <span id="convTriggerText" class="conv-trigger-text">自动跟随最新会话</span>
+          <span class="conv-chevron">▾</span>
+        </button>
+        <div id="convMenu" class="conv-menu hidden" role="listbox"></div>
+      </div>
+    </div>
+    <div class="topbar-row controls">
+      <button id="btnFilter" class="chip" title="切换显示全部内容或仅显示公式与图表">全部对话</button>
+      <button id="btnAutoScroll" class="chip active" title="新消息到达时自动滚动到底部">自动滚动</button>
+      <button id="btnTheme" class="chip" title="切换深色或浅色主题">浅色</button>
+    </div>
+  </header>
+
+  <section id="clipBanner" class="clip-banner hidden">
+    <div class="clip-header">
+      <span class="clip-title">剪贴板图片实时预览</span>
+      <div class="clip-actions">
+        <span id="clipName" class="clip-name"></span>
+        <button id="btnClipClear" class="icon-btn" title="隐藏预览">×</button>
+      </div>
+    </div>
+    <div class="clip-body">
+      <img id="clipImg" class="preview-img" alt="剪贴板图片" />
+    </div>
+  </section>
+
+  <main id="feed" class="feed">
+    <div class="empty-state">等待 Antigravity CLI 会话输出...</div>
+  </main>
+
+  <div id="lightbox" class="lightbox hidden" role="dialog" aria-modal="true">
+    <button id="lightboxClose" class="lightbox-close" title="关闭预览">×</button>
+    <img id="lightboxImg" src="" alt="图片放大预览" />
+    <div id="lightboxCaption" class="lightbox-caption"></div>
+  </div>
+
+  <div id="convCtxMenu" class="ctx-menu hidden" role="menu">
+    <button type="button" class="ctx-item" data-ctx-action="open-terminal">在新标签页中打开此 agy 会话</button>
+    <button type="button" class="ctx-item" data-ctx-action="select-sidebar">仅在侧边栏切换到此会话</button>
+    <div class="ctx-sep"></div>
+    <button type="button" class="ctx-item" data-ctx-action="copy-id">复制会话 ID</button>
+  </div>
+
+  <div id="toast" class="toast hidden"></div>
+
+  <script src="/vendor/marked/marked.min.js"></script>
+  <script src="/vendor/katex/katex.min.js"></script>
+  <script src="/vendor/katex/copy-tex.min.js"></script>
+  <script src="/vendor/mermaid/mermaid.min.js"></script>
+  <script src="/static/math_markdown.js"></script>
+  <script src="/static/app.js"></script>
+</body>
+</html>
