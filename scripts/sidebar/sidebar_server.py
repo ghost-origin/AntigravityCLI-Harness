@@ -1,4 +1,5 @@
 import argparse
+import base64
 import ctypes
 import http.server
 import json
@@ -216,11 +217,12 @@ def open_conversation_in_new_tab(conv_id: str, title: str = '', workspace: str =
     if not cwd:
         cwd = os.path.expanduser('~')
 
-    clean_title = ' '.join((title or '').replace('"', '').replace("'", '').split())[:22]
+    clean_title = ' '.join((title or '').replace('"', '').replace("'", '').replace(';', ' ').split())[:22]
     id8 = conv_id[:8]
     tab_title = f'agy · {clean_title} [{id8}]' if clean_title else f'agy [{id8}]'
 
-    ps_cmd = f"$env:AGY_SIDEBAR='0'; agy -r {conv_id}"
+    ps_script = f"$env:AGY_SIDEBAR='0'\nagy -r {conv_id}"
+    enc_cmd = base64.b64encode(ps_script.encode('utf-16-le')).decode('ascii')
     cfg_wt = HARNESS_CFG.get('executables', {}).get('wt_exe', '')
     wt_exe = cfg_wt if (cfg_wt and pathlib.Path(cfg_wt).is_file()) else (shutil.which('wt.exe') or shutil.which('wt'))
     flags = 0
@@ -237,10 +239,12 @@ def open_conversation_in_new_tab(conv_id: str, title: str = '', workspace: str =
                 '--suppressApplicationTitle',
                 '--title', tab_title,
                 '-d', cwd,
-                'powershell.exe', '-NoExit', '-Command', ps_cmd,
+                'powershell.exe', '-NoExit', '-EncodedCommand', enc_cmd,
             ]
         else:
-            cmd = ['powershell.exe', '-NoExit', '-Command', f"$Host.UI.RawUI.WindowTitle='{tab_title}'; {ps_cmd}"]
+            fallback_script = f"$Host.UI.RawUI.WindowTitle='{tab_title}'\n{ps_script}"
+            enc_fallback = base64.b64encode(fallback_script.encode('utf-16-le')).decode('ascii')
+            cmd = ['powershell.exe', '-NoExit', '-EncodedCommand', enc_fallback]
         subprocess.Popen(cmd, cwd=cwd, creationflags=flags, close_fds=True)
         return {'ok': True, 'conv_id': conv_id, 'cwd': cwd, 'tab_title': tab_title}
     except Exception as exc:
