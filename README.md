@@ -26,6 +26,7 @@ Unattended Windows harness for **Google Antigravity CLI (`agy`)**:
 | [`scripts/compact/`](scripts/compact/README.md) | `request-compact.ps1`, `auto-compact-worker.ps1` | Compact request producer, atomic claim, cooldown guard, idle wait, `/compact` injection, and post-`CHECKPOINT` auto-resume. |
 | [`scripts/injector/`](scripts/injector/README.md) | `send-console-input.ps1` | Win32 `AttachConsole` / `CONIN$` / `WriteConsoleInputW` console input primitive (supports `-TextBase64`). |
 | [`skills/auto-compact/`](skills/auto-compact/SKILL.md) | `SKILL.md` | Agent-side skill template defining the 300k/400k + 150k EOF decision matrix and the 4-step safe compaction handshake. |
+| [`skills/sidebar/`](skills/sidebar/SKILL.md) | `SKILL.md` | Agent-side `/sidebar` slash command skill template to open, restart, or stop the docked LaTeX/Mermaid sidebar directly inside `agy`. |
 
 ## Quick Start (Windows)
 

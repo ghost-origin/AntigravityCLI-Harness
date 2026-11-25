@@ -26,6 +26,7 @@
 | [`scripts/compact/`](scripts/compact/README.md) | `request-compact.ps1`、`auto-compact-worker.ps1` | 压缩调度与执行层：请求入队/直发、原子认领、硬冷却防重入、等待空闲、`/compact` 注入及 `CHECKPOINT` 后自动续跑。 |
 | [`scripts/injector/`](scripts/injector/README.md) | `send-console-input.ps1` | 底层控制台注入层：基于 Win32 `AttachConsole` / `CONIN$` / `WriteConsoleInputW` 的定向输入原语（支持 `-TextBase64`）。 |
 | [`skills/auto-compact/`](skills/auto-compact/SKILL.md) | `SKILL.md` | Agent 侧 Skill 模板：定义 300k/400k 与 150k EOF 判定矩阵及四步安全压缩握手协议。 |
+| [`skills/sidebar/`](skills/sidebar/SKILL.md) | `SKILL.md` | Agent 侧 `/sidebar` 斜杠命令模板：支持在 `agy` 对话中直接输入 `/sidebar`、`/sidebar restart` 或 `/sidebar stop` 唤醒或管理公式侧边栏。 |
 
 ## 快速开始（Windows）
 
