@@ -12,12 +12,15 @@ Unattended Windows harness for **Google Antigravity CLI (`agy`)**:
   - `tokens >= 150k` on stream EOF: compact first (`/compact`), then automatically trigger the same task breakdown & plan directive.
 - **Zero-Privilege Watchdog & Console Injector**: `Stop` hook stamps `"dispatch_ready": true` on `tmp/compact_request.json` and lets the host-side non-blocking `agy-watchdog.ps1` dispatch `auto-compact-worker.ps1` via Win32 `CONIN$` (`send-console-input.ps1 -TextBase64`), supporting multi-word/Unicode auto-resume prompts after `CHECKPOINT` detection.
 - **Unattended EOF Auto-Continue**: Watches `cli-*.log` for terminal retry exhaustion and resumes the running `agy` session without stealing window focus.
+- **Zero-Runtime-Dependency LaTeX & Image Sidebar**: Uses Windows native Microsoft Edge `--app=` mode, Python stdlib SSE, and bundled offline `KaTeX` + `copy-tex` + `marked.js` to dock beside Windows Terminal, render `$` / `$$` math with clean LaTeX copy/paste, and preview pasted and clipboard images in real time.
 
 ## Layout
 
 | Layer | Files | Purpose |
 | :--- | :--- | :--- |
-| [`scripts/launcher/`](scripts/launcher/README.md) | `agy.ps1`, `agy-stable.ps1`, `agy-stable.cmd` | Network-agnostic launcher wrappers that start and clean up `agy-watchdog.ps1` alongside `agy.exe`. |
+| [`Config/`](Config/README.md) | `harness.config`, `load-config.ps1`, `config_loader.py` | Centralized path and runtime configuration layer with `${REPO_ROOT}` / `${USERPROFILE}` placeholders and gitignored `harness.local.config` overrides. |
+| [`scripts/launcher/`](scripts/launcher/README.md) | `agy.ps1`, `agy-stable.ps1`, `agy-stable.cmd` | Network-agnostic launcher wrappers that start and clean up `agy-watchdog.ps1` and the LaTeX sidebar alongside `agy.exe`. |
+| [`scripts/sidebar/`](scripts/sidebar/README.md) | `sidebar_server.py`, `transcript_watcher.py`, `window_docker.py`, `launch-sidebar.ps1`, `web/`, `vendor/` | Live KaTeX, Mermaid & image sidebar: watches `transcript_full.jsonl`, clipboard images, and Windows Terminal active tabs with single-sidebar DWM docking. |
 | [`scripts/hooks/`](scripts/hooks/README.md) | `check-context.py`, `auto-compact-hook.py` | Antigravity native `PreInvocation` / `Stop` hook handler and read-only `transcript.jsonl` context analyzer (works across CLI, Desktop, and ACP). |
 | [`scripts/watchdog/`](scripts/watchdog/README.md) | `agy-watchdog.ps1` | Host-side non-blocking 400ms poller for `dispatch_ready` compact requests + `cli-*.log` EOF watcher & auto-continue trigger. |
 | [`scripts/compact/`](scripts/compact/README.md) | `request-compact.ps1`, `auto-compact-worker.ps1` | Compact request producer, atomic claim, cooldown guard, idle wait, `/compact` injection, and post-`CHECKPOINT` auto-resume. |

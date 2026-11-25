@@ -12,12 +12,15 @@
   - 流式 EOF 发生且 `tokens >= 150k`：先自动执行 `/compact` 压缩上下文，压缩完成后再自动触发相同的任务拆分与规划流程。
 - **零提权 Watchdog 与控制台注入**：`Stop` 钩子向 `tmp/compact_request.json` 原子写入 `"dispatch_ready": true`，由宿主机侧非阻塞 `agy-watchdog.ps1` 派发 `auto-compact-worker.ps1`，经 Win32 `CONIN$`（`send-console-input.ps1 -TextBase64`）安全注入 `/compact`，并在检测到新 `CHECKPOINT` 后自动注入支持多词与中文的续跑提示词。
 - **断流无人值守自动续跑**：监听 `cli-*.log` 中的重试耗尽与终态错误，在不抢占窗口焦点的情况下向运行中的 `agy` 控制台自动续跑。
+- **低依赖公式与图片实时侧边栏**：利用 Windows 自带 Edge 应用模式、Python 标准库与离线 `KaTeX` 静态资源，自动贴靠在 Windows Terminal 右侧实时渲染 `$` / `$$` 公式、支持源码级复制粘贴，并实时展示终端粘贴与剪贴板中的图片。
 
 ## 目录结构
 
 | 层次目录 | 包含文件 | 核心职责 |
 | :--- | :--- | :--- |
-| [`scripts/launcher/`](scripts/launcher/README.md) | `agy.ps1`、`agy-stable.ps1`、`agy-stable.cmd` | 启动封装层：与网络/代理层解耦，负责随 `agy.exe` 启动并在退出时清理 `agy-watchdog.ps1`。 |
+| [`Config/`](Config/README.md) | `harness.config`、`load-config.ps1`、`config_loader.py` | 配置中心层：统一集中管理全仓库脚本、日志、临时目录与 Antigravity 数据路径，支持 `harness.local.config` 本机覆盖。 |
+| [`scripts/launcher/`](scripts/launcher/README.md) | `agy.ps1`、`agy-stable.ps1`、`agy-stable.cmd` | 启动封装层：与网络/代理层解耦，负责随 `agy.exe` 启动并在退出时清理 `agy-watchdog.ps1` 与公式侧边栏。 |
+| [`scripts/sidebar/`](scripts/sidebar/README.md) | `sidebar_server.py`、`transcript_watcher.py`、`window_docker.py`、`launch-sidebar.ps1`、`web/`、`vendor/` | 公式与图片侧边栏层：实时监听 `transcript_full.jsonl`、剪贴板图片与 Windows Terminal 标签页切换，在 Edge 统一贴靠侧边窗中离线渲染 KaTeX 公式、Mermaid 图表与本地图片。 |
 | [`scripts/hooks/`](scripts/hooks/README.md) | `check-context.py`、`auto-compact-hook.py` | 生命周期钩子与度量层：`PreInvocation` / `Stop` 钩子与 `transcript.jsonl` 客观度量（CLI / Desktop / ACP 通用）。 |
 | [`scripts/watchdog/`](scripts/watchdog/README.md) | `agy-watchdog.ps1` | 宿主机守护层：400ms 非阻塞轮询 `dispatch_ready` 压缩请求，并监听 `cli-*.log` 捕获瞬时 EOF 与触发自动续跑。 |
 | [`scripts/compact/`](scripts/compact/README.md) | `request-compact.ps1`、`auto-compact-worker.ps1` | 压缩调度与执行层：请求入队/直发、原子认领、硬冷却防重入、等待空闲、`/compact` 注入及 `CHECKPOINT` 后自动续跑。 |
@@ -92,6 +95,7 @@ agy
 - `AGY_EXE`：显式指定 `agy.exe` 路径（默认从 `PATH` 自动查找）。
 - `AGY_HARNESS_PYTHON`：显式指定 `agy-watchdog.ps1` 使用的 Python 可执行文件路径（默认从 `PATH` 查找 `python`）。
 - `AGY_CLI_AUTO_COMPACT_OVERRIDE`：Antigravity CLI（`1.5.15+`）原生内核级自动压缩硬兜底阈值（例如 `750K`）。
+- `AGY_SIDEBAR` / `AGY_SIDEBAR_WIDTH_RATIO` / `AGY_SIDEBAR_NO_RESIZE`：控制公式侧边栏开关（设为 `0` 禁用）、宽度比例（默认 `0.38`）及是否自动调整左侧终端尺寸。
 - `AUTO_COMPACT_WARN_TOKENS` / `AUTO_COMPACT_TRIGGER_TOKENS` / `AUTO_COMPACT_EOF_TOKENS` / `AUTO_COMPACT_COOLDOWN_SECONDS`：覆盖钩子阈值与冷却时长（默认 `300000` / `400000` / `150000` / `180`）。
 
 ## 运行依赖
