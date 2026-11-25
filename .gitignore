@@ -6,3 +6,4 @@ docs/
 __pycache__/
 *.pyc
 .env
+Config/harness.local.config

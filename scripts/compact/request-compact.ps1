@@ -24,21 +24,34 @@ param(
 $ErrorActionPreference = 'Stop'
 $scriptsRoot = Split-Path $PSScriptRoot -Parent
 $repoRoot = Split-Path $scriptsRoot -Parent
+$cfgLoader = Join-Path $repoRoot 'Config\load-config.ps1'
+$harnessCfg = @{}
+if (Test-Path $cfgLoader) {
+    . $cfgLoader
+    $harnessCfg = Get-HarnessConfig -RepoRoot $repoRoot
+}
+function CfgVal([string]$sec, [string]$key, [string]$def) {
+    if (Get-Command Get-HarnessConfigValue -ErrorAction SilentlyContinue) {
+        return Get-HarnessConfigValue -Config $harnessCfg -Section $sec -Key $key -Default $def
+    }
+    return $def
+}
 
-if (-not $RequestFile) { $RequestFile = Join-Path $repoRoot 'tmp\compact_request.json' }
-if (-not $OutLog)      { $OutLog      = Join-Path $repoRoot 'logs\auto_compact.log' }
-if (-not $StateFile)   { $StateFile   = Join-Path $repoRoot 'logs\auto_compact_state.json' }
+if (-not $RequestFile) { $RequestFile = CfgVal 'compact' 'request_file' (Join-Path $repoRoot 'tmp\compact_request.json') }
+if (-not $OutLog)      { $OutLog      = CfgVal 'compact' 'out_log' (Join-Path $repoRoot 'logs\auto_compact.log') }
+if (-not $StateFile)   { $StateFile   = CfgVal 'compact' 'state_file' (Join-Path $repoRoot 'logs\auto_compact_state.json') }
 
 $reqDir = Split-Path $RequestFile -Parent
 if (-not (Test-Path $reqDir)) { New-Item -ItemType Directory -Path $reqDir -Force | Out-Null }
 
 $reqId = 'cmp-' + (Get-Date -Format 'yyyyMMdd_HHmmss') + '-' + (Get-Random -Minimum 1000 -Maximum 9999)
+$brainDir = CfgVal 'antigravity' 'brain_dir' (Join-Path $env:USERPROFILE '.gemini\antigravity-cli\brain')
 $transcriptPath = ''
 if ($ConversationId) {
-    $transcriptPath = Join-Path $env:USERPROFILE ('.gemini\antigravity-cli\brain\' + $ConversationId + '\.system_generated\logs\transcript.jsonl')
+    $transcriptPath = Join-Path $brainDir ($ConversationId + '\.system_generated\logs\transcript.jsonl')
 }
 
-$effectiveLogDir = if ($LogDir) { $LogDir } else { Join-Path $env:USERPROFILE '.gemini\antigravity-cli\log' }
+$effectiveLogDir = if ($LogDir) { $LogDir } else { CfgVal 'antigravity' 'cli_log_dir' (Join-Path $env:USERPROFILE '.gemini\antigravity-cli\log') }
 $logFile = ''
 $logOffset = -1
 if (Test-Path $effectiveLogDir) {
@@ -69,7 +82,7 @@ $payload | ConvertTo-Json -Depth 4 | Set-Content -Path $RequestFile -Encoding UT
 
 # Detect whether agy-watchdog.ps1 is actively running
 $watchdogPid = 0
-$pidFile = Join-Path $repoRoot 'logs\watchdog.pid'
+$pidFile = CfgVal 'watchdog' 'pid_file' (Join-Path $repoRoot 'logs\watchdog.pid')
 if (Test-Path $pidFile) {
     try {
         $pinfo = Get-Content -Path $pidFile -Raw -Encoding UTF8 | ConvertFrom-Json

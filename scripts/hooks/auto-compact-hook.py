@@ -11,10 +11,24 @@ sys.dont_write_bytecode = True
 
 DEFAULT_HARNESS_ROOT = str(pathlib.Path(__file__).resolve().parent.parent.parent)
 HARNESS_ROOT = pathlib.Path(os.environ.get('GEMINI_HARNESS_ROOT', DEFAULT_HARNESS_ROOT))
+_CONFIG_DIR = HARNESS_ROOT / 'Config'
+if str(_CONFIG_DIR) not in sys.path:
+    sys.path.insert(0, str(_CONFIG_DIR))
+try:
+    import config_loader as _cfg_loader
+    HARNESS_CFG = _cfg_loader.load_config(str(HARNESS_ROOT))
+except Exception:
+    HARNESS_CFG = {}
+
 WARN_TOKENS = int(os.environ.get('AUTO_COMPACT_WARN_TOKENS', '300000'))
 TRIGGER_TOKENS = int(os.environ.get('AUTO_COMPACT_TRIGGER_TOKENS', '400000'))
 EOF_COMPACT_TOKENS = int(os.environ.get('AUTO_COMPACT_EOF_TOKENS', '150000'))
 COOLDOWN_SECONDS = int(os.environ.get('AUTO_COMPACT_COOLDOWN_SECONDS', '180'))
+
+
+def cfg_path(section: str, key: str, fallback: pathlib.Path) -> pathlib.Path:
+    v = HARNESS_CFG.get(section, {}).get(key, '')
+    return pathlib.Path(v) if v else fallback
 
 EOF_RE = re.compile(r'unexpected\s+eof|stream\s+reading\s+error|\beof\b|stream\s+closed', re.IGNORECASE)
 
@@ -40,7 +54,7 @@ def load_check_module():
 
 def trace_log(hroot: pathlib.Path, msg: str):
     try:
-        lp = hroot / 'logs' / 'hook_trace.log'
+        lp = cfg_path('hooks', 'trace_log', hroot / 'logs' / 'hook_trace.log')
         lp.parent.mkdir(parents=True, exist_ok=True)
         ts = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
         with lp.open('a', encoding='utf-8') as f:
@@ -66,10 +80,14 @@ def save_state(path: pathlib.Path, data: dict):
         pass
 
 
+def compact_request_path(hroot: pathlib.Path) -> pathlib.Path:
+    return cfg_path('compact', 'request_file', hroot / 'tmp' / 'compact_request.json')
+
+
 def compact_processing_active(hroot: pathlib.Path) -> bool:
-    tmp_dir = hroot / 'tmp'
+    req_p = compact_request_path(hroot)
     try:
-        for p in tmp_dir.glob('compact_request.json.processing.*'):
+        for p in req_p.parent.glob(req_p.name + '.processing.*'):
             if p.is_file():
                 return True
     except Exception:
@@ -78,11 +96,11 @@ def compact_processing_active(hroot: pathlib.Path) -> bool:
 
 
 def compact_in_flight(hroot: pathlib.Path) -> bool:
-    return (hroot / 'tmp' / 'compact_request.json').is_file() or compact_processing_active(hroot)
+    return compact_request_path(hroot).is_file() or compact_processing_active(hroot)
 
 
 def mark_compact_request_ready(hroot: pathlib.Path) -> bool:
-    req_file = hroot / 'tmp' / 'compact_request.json'
+    req_file = compact_request_path(hroot)
     if not req_file.is_file() or compact_processing_active(hroot):
         return False
     try:
@@ -105,7 +123,7 @@ def write_ready_compact_request(
     reason: str,
     resume_prompt: str,
 ) -> bool:
-    req_file = hroot / 'tmp' / 'compact_request.json'
+    req_file = compact_request_path(hroot)
     try:
         req_file.parent.mkdir(parents=True, exist_ok=True)
         now_utc = datetime.datetime.now(datetime.timezone.utc)
@@ -133,7 +151,7 @@ def write_ready_compact_request(
 
 def clear_eof_signal(hroot: pathlib.Path):
     try:
-        p = hroot / 'tmp' / 'eof_signal.json'
+        p = cfg_path('watchdog', 'eof_signal_file', hroot / 'tmp' / 'eof_signal.json')
         if p.is_file():
             p.unlink()
     except Exception:
@@ -215,7 +233,7 @@ def handle_pre_invocation(payload: dict, ctx: dict, cstate: dict, hroot: pathlib
 
 def handle_stop(payload: dict, ctx: dict, cstate: dict, hroot: pathlib.Path) -> dict:
     # If a compact request is queued, stamp dispatch_ready=True for host watchdog and allow exit cleanly
-    req_file = hroot / 'tmp' / 'compact_request.json'
+    req_file = compact_request_path(hroot)
     if req_file.is_file():
         if os.environ.get('AUTO_COMPACT_HOOK_DRY_RUN') != '1':
             ok = mark_compact_request_ready(hroot)
@@ -312,7 +330,7 @@ def main():
             print('{}')
             return
 
-        state_file = HARNESS_ROOT / 'logs' / 'hook_state.json'
+        state_file = cfg_path('hooks', 'state_file', HARNESS_ROOT / 'logs' / 'hook_state.json')
         all_state = load_state(state_file)
         cid_key = conv_id or ctx.get('conversation_id', 'default')
         cstate = all_state.get(cid_key, {})

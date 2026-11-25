@@ -20,24 +20,39 @@ param(
 $ErrorActionPreference = 'Continue'
 $scriptsRoot = Split-Path $PSScriptRoot -Parent
 $repoRoot = Split-Path $scriptsRoot -Parent
+$cfgLoader = Join-Path $repoRoot 'Config\load-config.ps1'
+$harnessCfg = @{}
+if (Test-Path $cfgLoader) {
+    . $cfgLoader
+    $harnessCfg = Get-HarnessConfig -RepoRoot $repoRoot
+}
+function CfgVal([string]$sec, [string]$key, [string]$def) {
+    if (Get-Command Get-HarnessConfigValue -ErrorAction SilentlyContinue) {
+        return Get-HarnessConfigValue -Config $harnessCfg -Section $sec -Key $key -Default $def
+    }
+    return $def
+}
 
 if (-not $LogDir) {
-    $LogDir = Join-Path $env:USERPROFILE '.gemini\antigravity-cli\log'
+    $LogDir = CfgVal 'antigravity' 'cli_log_dir' (Join-Path $env:USERPROFILE '.gemini\antigravity-cli\log')
 }
 if (-not $OutLog) {
-    $OutLog = Join-Path $repoRoot 'logs\agy_watchdog.log'
+    $OutLog = CfgVal 'watchdog' 'out_log' (Join-Path $repoRoot 'logs\agy_watchdog.log')
 }
 if (-not $CompactRequestFile) {
-    $CompactRequestFile = Join-Path $repoRoot 'tmp\compact_request.json'
+    $CompactRequestFile = CfgVal 'compact' 'request_file' (Join-Path $repoRoot 'tmp\compact_request.json')
 }
 if (-not $CompactStateFile) {
-    $CompactStateFile = Join-Path $repoRoot 'logs\auto_compact_state.json'
+    $CompactStateFile = CfgVal 'compact' 'state_file' (Join-Path $repoRoot 'logs\auto_compact_state.json')
 }
 if (-not $CompactOutLog) {
-    $CompactOutLog = Join-Path $repoRoot 'logs\auto_compact.log'
+    $CompactOutLog = CfgVal 'compact' 'out_log' (Join-Path $repoRoot 'logs\auto_compact.log')
 }
 if (-not $EofSignalFile) {
-    $EofSignalFile = Join-Path $repoRoot 'tmp\eof_signal.json'
+    $EofSignalFile = CfgVal 'watchdog' 'eof_signal_file' (Join-Path $repoRoot 'tmp\eof_signal.json')
+}
+if (-not $PidFile) {
+    $PidFile = CfgVal 'watchdog' 'pid_file' (Join-Path $repoRoot 'logs\watchdog.pid')
 }
 if (-not (Test-Path $LogDir)) {
     Write-Output ((Get-Date -Format 'yyyy-MM-dd HH:mm:ss') + ' log dir not found: ' + $LogDir)

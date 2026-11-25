@@ -15,11 +15,23 @@ param(
 $ErrorActionPreference = 'Continue'
 $scriptsRoot = Split-Path $PSScriptRoot -Parent
 $repoRoot = Split-Path $scriptsRoot -Parent
+$cfgLoader = Join-Path $repoRoot 'Config\load-config.ps1'
+$harnessCfg = @{}
+if (Test-Path $cfgLoader) {
+    . $cfgLoader
+    $harnessCfg = Get-HarnessConfig -RepoRoot $repoRoot
+}
+function CfgVal([string]$sec, [string]$key, [string]$def) {
+    if (Get-Command Get-HarnessConfigValue -ErrorAction SilentlyContinue) {
+        return Get-HarnessConfigValue -Config $harnessCfg -Section $sec -Key $key -Default $def
+    }
+    return $def
+}
 
-if (-not $RequestFile) { $RequestFile = Join-Path $repoRoot 'tmp\compact_request.json' }
-if (-not $LogDir)      { $LogDir      = Join-Path $env:USERPROFILE '.gemini\antigravity-cli\log' }
-if (-not $OutLog)      { $OutLog      = Join-Path $repoRoot 'logs\auto_compact.log' }
-if (-not $StateFile)   { $StateFile   = Join-Path $repoRoot 'logs\auto_compact_state.json' }
+if (-not $RequestFile) { $RequestFile = CfgVal 'compact' 'request_file' (Join-Path $repoRoot 'tmp\compact_request.json') }
+if (-not $LogDir)      { $LogDir      = CfgVal 'antigravity' 'cli_log_dir' (Join-Path $env:USERPROFILE '.gemini\antigravity-cli\log') }
+if (-not $OutLog)      { $OutLog      = CfgVal 'compact' 'out_log' (Join-Path $repoRoot 'logs\auto_compact.log') }
+if (-not $StateFile)   { $StateFile   = CfgVal 'compact' 'state_file' (Join-Path $repoRoot 'logs\auto_compact_state.json') }
 
 function Write-CompactLog([string]$msg) {
     $line = (Get-Date -Format 'yyyy-MM-dd HH:mm:ss') + ' ' + $msg
@@ -73,8 +85,9 @@ $delaySec   = if ($null -ne $req.delay_seconds) { [int]$req.delay_seconds } else
 $enterCount = if ($null -ne $req.enter_count)   { [int]$req.enter_count }   else { 1 }
 $charDelay  = if ($null -ne $req.char_delay_ms) { [int]$req.char_delay_ms } else { 0 }
 $transcript = if ($req.transcript_path) { [string]$req.transcript_path } else { '' }
+$brainDir = CfgVal 'antigravity' 'brain_dir' (Join-Path $env:USERPROFILE '.gemini\antigravity-cli\brain')
 if (-not $transcript -and $convId) {
-    $transcript = Join-Path $env:USERPROFILE ('.gemini\antigravity-cli\brain\' + $convId + '\.system_generated\logs\transcript.jsonl')
+    $transcript = Join-Path $brainDir ($convId + '\.system_generated\logs\transcript.jsonl')
 }
 
 # Cooldown check
@@ -157,7 +170,7 @@ if ($pidToUse -le 0) {
 $beforeCp = Get-CheckpointCount $transcript
 
 function Invoke-ConsoleInjector([int]$targetPid, [string]$textValue, [int]$enters, [int]$cDelay) {
-    $injector = Join-Path $scriptsRoot 'injector\send-console-input.ps1'
+    $injector = CfgVal 'compact' 'injector_script' (Join-Path $scriptsRoot 'injector\send-console-input.ps1')
     if (-not (Test-Path $injector)) {
         return $null
     }
@@ -180,7 +193,7 @@ else {
 }
 
 # Persist state (avoid polluting default state during DryRun unless custom StateFile was provided)
-$defaultState = Join-Path $repoRoot 'logs\auto_compact_state.json'
+$defaultState = CfgVal 'compact' 'state_file' (Join-Path $repoRoot 'logs\auto_compact_state.json')
 if (-not $DryRun -or ($StateFile -ne $defaultState)) {
     $stDir = Split-Path $StateFile -Parent
     if (-not (Test-Path $stDir)) { New-Item -ItemType Directory -Path $stDir -Force | Out-Null }

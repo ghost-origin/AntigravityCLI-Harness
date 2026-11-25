@@ -8,6 +8,22 @@ import sys
 
 EOF_RE = re.compile(r'unexpected\s+eof|stream\s+reading\s+error|\beof\b|stream\s+closed', re.IGNORECASE)
 DEFAULT_HARNESS_ROOT = str(pathlib.Path(__file__).resolve().parent.parent.parent)
+_CONFIG_DIR = pathlib.Path(DEFAULT_HARNESS_ROOT) / 'Config'
+if str(_CONFIG_DIR) not in sys.path:
+    sys.path.insert(0, str(_CONFIG_DIR))
+try:
+    import config_loader as _cfg_loader
+except Exception:
+    _cfg_loader = None
+
+
+def _load_cfg(harness_root: str = DEFAULT_HARNESS_ROOT) -> dict:
+    if _cfg_loader:
+        try:
+            return _cfg_loader.load_config(harness_root)
+        except Exception:
+            pass
+    return {}
 
 
 def parse_iso(ts: str):
@@ -21,11 +37,13 @@ def parse_iso(ts: str):
         return None
 
 
-def find_transcript(conversation_id: str, explicit_path: str):
+def find_transcript(conversation_id: str, explicit_path: str, harness_root: str = DEFAULT_HARNESS_ROOT):
     if explicit_path:
         p = pathlib.Path(explicit_path)
         return p if p.is_file() else None
-    brain = pathlib.Path(os.path.expanduser('~')) / '.gemini' / 'antigravity-cli' / 'brain'
+    cfg = _load_cfg(harness_root)
+    brain_str = cfg.get('antigravity', {}).get('brain_dir', '')
+    brain = pathlib.Path(brain_str) if brain_str else (pathlib.Path(os.path.expanduser('~')) / '.gemini' / 'antigravity-cli' / 'brain')
     if conversation_id:
         p = brain / conversation_id / '.system_generated' / 'logs' / 'transcript.jsonl'
         return p if p.is_file() else None
@@ -64,7 +82,7 @@ def analyze_context(
     harness_root: str = DEFAULT_HARNESS_ROOT,
     milestone: bool = False,
 ):
-    tpath = find_transcript(conversation_id, transcript)
+    tpath = find_transcript(conversation_id, transcript, harness_root=harness_root)
     if not tpath:
         return {'ok': False, 'error': 'transcript.jsonl not found'}
 
@@ -123,7 +141,12 @@ def analyze_context(
         secs_since_cp = int((now - dt_cp.astimezone(datetime.timezone.utc)).total_seconds())
 
     hroot = pathlib.Path(harness_root)
-    state = load_json_safe(hroot / 'logs' / 'auto_compact_state.json')
+    cfg = _load_cfg(harness_root)
+    state_p = pathlib.Path(cfg.get('compact', {}).get('state_file', '') or (hroot / 'logs' / 'auto_compact_state.json'))
+    pid_p = pathlib.Path(cfg.get('watchdog', {}).get('pid_file', '') or (hroot / 'logs' / 'watchdog.pid'))
+    eof_sig_path = pathlib.Path(cfg.get('watchdog', {}).get('eof_signal_file', '') or (hroot / 'tmp' / 'eof_signal.json'))
+
+    state = load_json_safe(state_p)
     last_req_dt = parse_iso(state.get('last_compact_at', ''))
     cooldown_rem = 0
     if last_req_dt:
@@ -133,11 +156,10 @@ def analyze_context(
     if secs_since_cp is not None and secs_since_cp < cooldown_seconds:
         cooldown_rem = max(cooldown_rem, cooldown_seconds - secs_since_cp)
 
-    pid_info = load_json_safe(hroot / 'logs' / 'watchdog.pid')
+    pid_info = load_json_safe(pid_p)
     watchdog_present = bool(pid_info.get('pid'))
 
     # Check watchdog-written transient EOF signal
-    eof_sig_path = hroot / 'tmp' / 'eof_signal.json'
     eof_sig = load_json_safe(eof_sig_path)
     watchdog_eof_active = False
     watchdog_eof_id = ''
