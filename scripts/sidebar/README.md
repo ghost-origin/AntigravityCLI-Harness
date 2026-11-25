@@ -1,47 +1,29 @@
 # Sidebar Layer (`scripts/sidebar/`)
 
-面向 Windows Terminal 与 `agy` 的低依赖公式与图片实时侧边栏：复用 Windows 原生 Microsoft Edge 无边框应用模式、Python 3 标准库本地微服以及离线内置的开源 `KaTeX`、`copy-tex` 与 `marked.js`，无需 Node.js、Electron 或第三方 Python 包。
+面向 Windows Terminal 与 `agy` 的低依赖公式、Mermaid 与图片实时预览侧边栏：复用 Windows 原生 Microsoft Edge 无边框应用模式、Python 3 标准库 SSE 微服以及离线内置静态前端资产，无需 Node.js、Electron 或第三方 Python 包。
 
-## 文件说明
+## 核心文件
 
 | 文件 | 作用 |
 | :--- | :--- |
-| `transcript_watcher.py` | 扫描并解析 `~/.gemini/antigravity-cli/brain/*/transcript_full.jsonl`，提取对话正文与 `USER_INPUT.media` 贴图路径，并通过 Win32 `ctypes` 轻量监控剪贴板图片变化。 |
-| `window_docker.py` | 基于 Win32 DWM 可见边框将 Windows Terminal 与 Edge 侧边栏融合为统一窗口：保留终端原始大小无缝贴合右侧，支持双向拖动跟随、拖拉交界线维持总宽度不变以及最小化与置顶层级联动。 |
-| `sidebar_server.py` | 纯 Python 标准库本地 HTTP 与 SSE 服务，负责推送实时会话更新、代理本地图片 `/api/media`、管理窗口贴靠 `/api/dock`、输出剪贴板预览图并响应优雅关闭信号。 |
-| `launch-sidebar.ps1` | 启动本地微服与 Edge 应用窗，并将终端与侧边窗句柄交给 `/api/dock` 自动贴靠，支持 `-Stop` 优雅关闭。 |
-| `fetch-vendor.ps1` | 幂等下载或更新离线 `KaTeX`、字体、`marked.js` 与 `mermaid.min.js` 至 `vendor/`。 |
-| `web/` | 侧边栏前端页面，负责保护代码块与货币符号、解析 `$` / `$$` 公式与 `mermaid` 图表、提供单公式与整段 Markdown 复制以及图片与图表灯箱放大。 |
+| `transcript_watcher.py` | 解析 `transcript_full.jsonl`、`annotations/*.pbtxt` 与 `conversation_metadata.json`，提取会话概括标题、工作目录、回复正文与 `USER_INPUT.media` 贴图，并经 Win32 `ctypes` 轻量监听剪贴板图片。 |
+| `window_docker.py` | 启用 Per-Monitor V2 DPI 感知，基于 Win32 DWM 可见边框将 Windows Terminal 与 Edge 侧边窗融合为统一窗口，支持双向无漂移跟随、交界线保总宽拖拽、串流切分辨率自动重贴靠与标签页标题切换联动。 |
+| `sidebar_server.py` | 纯 Python 标准库 HTTP 与 SSE 服务，提供 `/api/events`、`/api/snapshot`、`/api/media`、`/api/dock`、`/api/open-terminal` 与 `/api/shutdown` 接口。 |
+| `launch-sidebar.ps1` | 启动本地微服与 Edge 应用窗并完成句柄贴靠，内置按终端窗口句柄的单实例复用保护。 |
+| `fetch-vendor.ps1` | 幂等拉取或更新离线第三方前端库至 `vendor/`。 |
 
-## 使用方式
+## 子目录导览
 
-### 1. 随 `agy` 自动启动
+- [`web/`](web/README.md)：前端页面、深浅配色样式、Markdown 与 `$` / `$$` 公式解析、Mermaid 渲染与交互逻辑。
+- [`vendor/`](vendor/README.md)：离线内置的 `KaTeX`、`copy-tex`、`marked` 与 `mermaid` 静态资源清单与更新方式。
 
-配置好 [agy.ps1](../launcher/agy.ps1) 后，在 Windows Terminal 中直接运行 `agy` 即会自动在右侧打开侧边栏，并在退出 `agy` 时优雅关闭。
+## 使用与唤醒方式
 
-如需临时关闭自动拉起侧边栏，可设置环境变量：
+- **随 `agy` 自动联动**：通过 [`../launcher/agy.ps1`](../launcher/agy.ps1) 启动 `agy` 时自动贴靠，退出时自动关闭。
+- **终端命令手动唤醒**：在 PowerShell 中执行 `agy-sidebar` 或 `.\scripts\sidebar\launch-sidebar.ps1`。
+- **对话内斜杠命令唤醒**：安装 [`../../skills/sidebar/SKILL.md`](../../skills/sidebar/SKILL.md) 后，可在 `agy` 中直接输入 `/sidebar`、`/sidebar restart` 或 `/sidebar stop`。
+- **右键多标签页联动**：左键会话列表项切换当前侧边栏预览；右键会话项可通过 `wt.exe -w 0 new-tab` 在同一 Windows Terminal 新建标签页恢复该会话，点击不同标签页时侧边栏自动跟随切换。
 
-```powershell
-$env:AGY_SIDEBAR = '0'
-```
+## 配置项
 
-### 2. 手动独立启动或重新打开
-
-在任意 PowerShell 窗口中运行：
-
-```powershell
-agy-sidebar
-```
-
-或直接调用脚本：
-
-```powershell
-.\scripts\sidebar\launch-sidebar.ps1
-```
-
-## 可选环境变量
-
-- `AGY_SIDEBAR`：设为 `0` 时禁用 `agy` 自动启动侧边栏，默认开启。
-- `AGY_SIDEBAR_WIDTH_RATIO`：侧边栏占当前显示器工作区宽度的比例，默认 `0.38`，范围 `0.25` 至 `0.55`。
-- `AGY_SIDEBAR_NO_RESIZE`：设为 `1` 时不自动调整左侧 Windows Terminal 窗口尺寸。
-- `AGY_SIDEBAR_BROWSER`：显式指定浏览器可执行文件路径，默认优先使用系统自带 `msedge.exe`。
+所有路径与默认宽度比例集中由 [`../../Config/README.md`](../../Config/README.md) 中的 `[sidebar]`、`[antigravity]` 与 `[executables]` 管理，并支持环境变量 `AGY_SIDEBAR`、`AGY_SIDEBAR_WIDTH_RATIO`、`AGY_SIDEBAR_NO_DOCK` 与 `AGY_SIDEBAR_BROWSER` 覆盖。

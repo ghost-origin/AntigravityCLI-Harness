@@ -6,7 +6,7 @@ CLI 启动封装层：负责以与网络/代理层解耦的方式启动 `agy.exe
 
 | 文件 | 作用 |
 | :--- | :--- |
-| `agy.ps1` | 定义 `function agy`：查找 `agy.exe`（优先 `$env:AGY_EXE`，否则从 `PATH` 解析），隐藏启动 `../watchdog/agy-watchdog.ps1 -WaitForNew`，透传参数运行 `agy.exe`，并在 CLI 退出时自动终止对应的 watchdog 进程。 |
+| `agy.ps1` | 定义 `function agy` 与 `function agy-sidebar`：从 [`../../Config/`](../../Config/README.md) 读取默认路径，隐藏启动 `../watchdog/agy-watchdog.ps1 -WaitForNew`，按单窗口复用规则拉起 `../sidebar/launch-sidebar.ps1`，识别 `-r` / `--resume` 恢复会话并在退出时自动清理自有进程。 |
 | `agy-stable.ps1` | PowerShell 脚本入口，dot-source `agy.ps1` 并透传 `@args`。 |
 | `agy-stable.cmd` | CMD 入口，调用 `agy-stable.ps1` 并透传 `%*`。 |
 
