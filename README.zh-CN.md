@@ -18,7 +18,7 @@
 
 | 层次目录 | 包含文件 | 核心职责 |
 | :--- | :--- | :--- |
-| [`Config/`](Config/README.md) | `harness.config`、`load-config.ps1`、`config_loader.py` | 配置中心层：统一集中管理全仓库脚本、日志、临时目录与 Antigravity 数据路径，支持 `harness.local.config` 本机覆盖。 |
+| [`Config/`](Config/README.md) | `harness.config.example`、`load-config.ps1`、`config_loader.py` | 配置中心层：提供可公开推送的标准配置模板，并将本机真实配置 `Config/harness.config` 纳入 `.gitignore` 隔离管理。 |
 | [`scripts/launcher/`](scripts/launcher/README.md) | `agy.ps1`、`agy-stable.ps1`、`agy-stable.cmd` | 启动封装层：与网络/代理层解耦，负责随 `agy.exe` 启动并在退出时清理 `agy-watchdog.ps1` 与公式侧边栏。 |
 | [`scripts/sidebar/`](scripts/sidebar/README.md) | `sidebar_server.py`、`transcript_watcher.py`、`window_docker.py`、`launch-sidebar.ps1`、`web/`、`vendor/` | 公式与图片侧边栏层：实时监听 `transcript_full.jsonl`、剪贴板图片与 Windows Terminal 标签页切换，在 Edge 统一贴靠侧边窗中离线渲染 KaTeX 公式、Mermaid 图表与本地图片。 |
 | [`scripts/hooks/`](scripts/hooks/README.md) | `check-context.py`、`auto-compact-hook.py` | 生命周期钩子与度量层：`PreInvocation` / `Stop` 钩子与 `transcript.jsonl` 客观度量（CLI / Desktop / ACP 通用）。 |

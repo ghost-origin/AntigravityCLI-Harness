@@ -15,7 +15,7 @@ function Get-HarnessConfig {
 
     $cfg = @{}
     $configDir = Join-Path $RepoRoot 'Config'
-    foreach ($name in @('harness.config', 'harness.local.config')) {
+    foreach ($name in @('harness.config.example', 'harness.config', 'harness.local.config')) {
         $fp = Join-Path $configDir $name
         if (-not (Test-Path $fp)) { continue }
         $section = 'default'

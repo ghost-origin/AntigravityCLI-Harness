@@ -1,6 +1,6 @@
-# AntigravityCLI-Harness centralized path and runtime configuration.
+# AntigravityCLI-Harness standard configuration template (tracked in Git).
+# Copy this file to Config/harness.config (gitignored) to store machine-specific paths.
 # Supported placeholders: ${REPO_ROOT}, ${USERPROFILE}
-# Optional machine-specific overrides can be placed in Config/harness.local.config (gitignored).
 
 [paths]
 repo_root = ${REPO_ROOT}
@@ -17,6 +17,11 @@ conversation_cache_file = ${USERPROFILE}/.gemini/antigravity-cli/cache/conversat
 
 [executables]
 # Leave blank to auto-detect from PATH or standard install locations.
+# Examples in your local Config/harness.config:
+# agy_exe = D:/Tools/AntigravityCLI/bin/agy.exe
+# python_exe = C:/Python311/python.exe
+# browser_exe = C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe
+# wt_exe = ${USERPROFILE}/AppData/Local/Microsoft/WindowsApps/wt.exe
 agy_exe =
 python_exe =
 browser_exe =

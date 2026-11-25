@@ -18,7 +18,7 @@ Unattended Windows harness for **Google Antigravity CLI (`agy`)**:
 
 | Layer | Files | Purpose |
 | :--- | :--- | :--- |
-| [`Config/`](Config/README.md) | `harness.config`, `load-config.ps1`, `config_loader.py` | Centralized path and runtime configuration layer with `${REPO_ROOT}` / `${USERPROFILE}` placeholders and gitignored `harness.local.config` overrides. |
+| [`Config/`](Config/README.md) | `harness.config.example`, `load-config.ps1`, `config_loader.py` | Centralized configuration layer with a tracked portable template and gitignored `Config/harness.config` for machine-specific paths. |
 | [`scripts/launcher/`](scripts/launcher/README.md) | `agy.ps1`, `agy-stable.ps1`, `agy-stable.cmd` | Network-agnostic launcher wrappers that start and clean up `agy-watchdog.ps1` and the LaTeX sidebar alongside `agy.exe`. |
 | [`scripts/sidebar/`](scripts/sidebar/README.md) | `sidebar_server.py`, `transcript_watcher.py`, `window_docker.py`, `launch-sidebar.ps1`, `web/`, `vendor/` | Live KaTeX, Mermaid & image sidebar: watches `transcript_full.jsonl`, clipboard images, and Windows Terminal active tabs with single-sidebar DWM docking. |
 | [`scripts/hooks/`](scripts/hooks/README.md) | `check-context.py`, `auto-compact-hook.py` | Antigravity native `PreInvocation` / `Stop` hook handler and read-only `transcript.jsonl` context analyzer (works across CLI, Desktop, and ACP). |

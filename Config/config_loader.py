@@ -23,7 +23,7 @@ def load_config(repo_root: str = '') -> dict:
     cfg_dir = root / 'Config'
 
     parser = configparser.ConfigParser(interpolation=None)
-    for fname in ('harness.config', 'harness.local.config'):
+    for fname in ('harness.config.example', 'harness.config', 'harness.local.config'):
         fp = cfg_dir / fname
         if fp.is_file():
             try:
